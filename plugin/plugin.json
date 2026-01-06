@@ -1,0 +1,52 @@
+{
+  "name": "terminal-plugin",
+  "version": "0.1.0",
+  "description": "Terminal Plugin - 本地 PTY 和 SSH 终端模拟器，支持多标签页和搜索功能",
+  "author": "ProxyCast Team",
+  "homepage": "https://github.com/aiclientproxy/terminal-plugin",
+  "license": "MIT",
+  "plugin_type": "tool",
+  "entry": "terminal-plugin-cli",
+  "hooks": [],
+  "min_proxycast_version": "1.0.0",
+  "binary": {
+    "binary_name": "terminal-plugin-cli",
+    "github_owner": "aiclientproxy",
+    "github_repo": "terminal-plugin",
+    "platform_binaries": {
+      "macos-arm64": "terminal-plugin-aarch64-apple-darwin",
+      "macos-x64": "terminal-plugin-x86_64-apple-darwin",
+      "linux-x64": "terminal-plugin-x86_64-unknown-linux-gnu",
+      "linux-arm64": "terminal-plugin-aarch64-unknown-linux-gnu",
+      "windows-x64": "terminal-plugin-x86_64-pc-windows-msvc.exe"
+    },
+    "checksum_file": "checksums.txt"
+  },
+  "ui": {
+    "surfaces": ["tool_panel"],
+    "icon": "Terminal",
+    "title": "终端",
+    "entry": "dist/index.js",
+    "styles": "dist/styles.css",
+    "default_width": 900,
+    "default_height": 600
+  },
+  "rpc": {
+    "protocol": "json-rpc-2.0",
+    "transport": "stdio",
+    "methods": [
+      "session.create",
+      "session.input",
+      "session.resize",
+      "session.close",
+      "session.list",
+      "session.get"
+    ],
+    "notifications": [
+      "terminal.output",
+      "session.status",
+      "session.title",
+      "session.cwd"
+    ]
+  }
+}

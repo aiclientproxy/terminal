@@ -1,0 +1,31 @@
+{
+  "enabled": true,
+  "timeout_ms": 30000,
+  "settings": {
+    "terminal": {
+      "default_shell": null,
+      "font_size": 14,
+      "font_family": "Menlo, Monaco, 'Courier New', monospace",
+      "line_height": 1.2,
+      "cursor_blink": true,
+      "cursor_style": "block",
+      "scrollback": 10000,
+      "theme": "vscode-dark"
+    },
+    "pty": {
+      "term_env": "xterm-256color",
+      "default_cwd": null,
+      "inherit_env": true
+    },
+    "ssh": {
+      "default_port": 22,
+      "connection_timeout_ms": 30000,
+      "keepalive_interval_ms": 60000
+    },
+    "osc": {
+      "enable_osc7": true,
+      "enable_osc52": true,
+      "max_clipboard_size_bytes": 1048576
+    }
+  }
+}

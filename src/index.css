@@ -1,0 +1,36 @@
+/* xterm.js 样式 - 必须在 @tailwind 之前 */
+@import '@xterm/xterm/css/xterm.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 终端容器样式 */
+.terminal-container {
+  @apply w-full h-full;
+}
+
+.terminal-container .xterm {
+  @apply w-full h-full;
+}
+
+.terminal-container .xterm-viewport {
+  @apply overflow-y-auto;
+}
+
+/* 滚动条样式 */
+.terminal-container .xterm-viewport::-webkit-scrollbar {
+  @apply w-2;
+}
+
+.terminal-container .xterm-viewport::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.terminal-container .xterm-viewport::-webkit-scrollbar-thumb {
+  @apply bg-gray-600 rounded;
+}
+
+.terminal-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}

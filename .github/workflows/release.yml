@@ -1,0 +1,209 @@
+name: Release Binary
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: plugin/dist/
+
+  build-backend:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            binary_name: terminal-plugin-aarch64-apple-darwin
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            binary_name: terminal-plugin-x86_64-apple-darwin
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary_name: terminal-plugin-x86_64-pc-windows-msvc.exe
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            binary_name: terminal-plugin-x86_64-unknown-linux-gnu
+          - platform: ubuntu-22.04
+            target: aarch64-unknown-linux-gnu
+            binary_name: terminal-plugin-aarch64-unknown-linux-gnu
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (Linux ARM64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: "rust-cache-${{ matrix.target }}"
+          cache-on-failure: true
+
+      - name: Build binary
+        run: |
+          cd src-tauri
+          cargo build --release --target ${{ matrix.target }} --bin terminal-plugin-cli
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cp src-tauri/target/${{ matrix.target }}/release/terminal-plugin-cli ${{ matrix.binary_name }}
+          chmod +x ${{ matrix.binary_name }}
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          copy src-tauri\target\${{ matrix.target }}\release\terminal-plugin-cli.exe ${{ matrix.binary_name }}
+
+      - name: Generate checksum (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          shasum -a 256 ${{ matrix.binary_name }} | cut -d ' ' -f 1 > ${{ matrix.binary_name }}.sha256
+
+      - name: Generate checksum (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 ${{ matrix.binary_name }}).Hash.ToLower()
+          $hash | Out-File -Encoding ASCII ${{ matrix.binary_name }}.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary_name }}
+          path: |
+            ${{ matrix.binary_name }}
+            ${{ matrix.binary_name }}.sha256
+
+  release:
+    needs: [build-frontend, build-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          # 复制后端二进制文件
+          find artifacts -type f -name "terminal-plugin-*" -exec cp {} release/ \;
+          cd release
+          # 合并所有 checksum 到一个文件
+          for f in terminal-plugin-*; do
+            if [[ ! "$f" == *.sha256 ]]; then
+              hash=$(cat "$f.sha256")
+              echo "$hash  $f" >> checksums.txt
+            fi
+          done
+          rm -f *.sha256
+          ls -la
+
+      - name: Package plugin
+        run: |
+          # 创建插件包目录结构
+          mkdir -p plugin-package/dist
+          
+          # 复制插件配置文件
+          cp plugin/plugin.json plugin-package/
+          cp plugin/config.json plugin-package/
+          
+          # 复制前端构建产物
+          cp artifacts/frontend-dist/* plugin-package/dist/
+          
+          # 打包为 zip（保持目录结构）
+          cd plugin-package
+          zip -r ../release/terminal-plugin.zip .
+          cd ..
+          
+          # 显示打包结果
+          echo "Plugin package contents:"
+          unzip -l release/terminal-plugin.zip
+          echo ""
+          ls -la release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: Terminal Plugin ${{ github.event.inputs.version || github.ref_name }}
+          body: |
+            ## Terminal Plugin Release
+
+            ProxyCast 终端插件 - 支持本地 PTY 和 SSH 远程连接
+
+            ### 功能
+            - 本地终端 (PTY)
+            - SSH 远程连接
+            - 多标签页管理
+            - 终端搜索
+            - OSC 序列支持 (工作目录、剪贴板)
+
+            ### 下载
+            - **插件包**: `terminal-plugin.zip` (在 ProxyCast 插件中心安装)
+            - **macOS (Apple Silicon)**: `terminal-plugin-aarch64-apple-darwin`
+            - **macOS (Intel)**: `terminal-plugin-x86_64-apple-darwin`
+            - **Windows (64-bit)**: `terminal-plugin-x86_64-pc-windows-msvc.exe`
+            - **Linux (x64)**: `terminal-plugin-x86_64-unknown-linux-gnu`
+            - **Linux (ARM64)**: `terminal-plugin-aarch64-unknown-linux-gnu`
+
+            ### 安装
+            1. 在 ProxyCast 中打开「插件中心」
+            2. 点击「安装插件」
+            3. 输入插件包 URL: `https://github.com/aiclientproxy/terminal-plugin/releases/download/${{ github.event.inputs.version || github.ref_name }}/terminal-plugin.zip`
+            4. 点击安装
+          draft: false
+          prerelease: false
+          files: release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

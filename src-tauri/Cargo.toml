@@ -1,0 +1,75 @@
+[package]
+name = "terminal-plugin"
+version = "0.1.0"
+edition = "2021"
+authors = ["ProxyCast Team"]
+description = "Terminal Plugin for ProxyCast - PTY and SSH terminal emulator"
+license = "MIT"
+repository = "https://github.com/aiclientproxy/terminal-plugin"
+
+[[bin]]
+name = "terminal-plugin-cli"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full", "sync", "process", "io-util"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# PTY management
+portable-pty = "0.8"
+
+# SSH client
+russh = "0.45"
+russh-keys = "0.45"
+
+# UUID for session IDs
+uuid = { version = "1", features = ["v4"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Base64 encoding for terminal data
+base64 = "0.22"
+
+# Futures utilities
+futures = "0.3"
+
+# System utilities
+dirs = "5"
+whoami = "1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+proptest = "1.4"
+
+# 构建配置
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = "z"  # 优化二进制大小
+panic = "abort"  # 减小二进制大小
+
+# 构建元数据
+[package.metadata.cross]
+# 支持的交叉编译目标
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc"
+]
