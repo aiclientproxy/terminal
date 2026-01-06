@@ -23,7 +23,7 @@
     "checksum_file": "checksums.txt"
   },
   "ui": {
-    "surfaces": ["tool_panel"],
+    "surfaces": ["tools"],
     "icon": "Terminal",
     "title": "终端",
     "entry": "dist/index.js",
