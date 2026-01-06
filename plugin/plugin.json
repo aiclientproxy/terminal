@@ -5,7 +5,7 @@
   "author": "ProxyCast Team",
   "homepage": "https://github.com/aiclientproxy/terminal-plugin",
   "license": "MIT",
-  "plugin_type": "tool",
+  "plugin_type": "binary",
   "entry": "terminal-plugin-cli",
   "hooks": [],
   "min_proxycast_version": "1.0.0",
