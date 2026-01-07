@@ -3,21 +3,31 @@
  *
  * 提供终端界面，支持本地 PTY 和 SSH 连接。
  * 集成多标签页管理和会话状态。
+ * 使用 ProxyCast Plugin SDK 进行 RPC 通信。
+ * 参考 waveterm 设计风格。
  *
  * @module App
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
-import { SessionProvider, useSessionStore } from '@/store/session-store';
-import { TerminalTabs, EmptyTabsPlaceholder, Tab } from '@/components/Terminal';
-import { TerminalView } from '@/components/Terminal/TerminalView';
-import { NewConnectionDialog } from '@/components/Dialogs';
-import type { SessionStatus, ConnectionType } from '@/types/rpc';
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { SessionProvider, useSessionStore } from "@/store/session-store";
+import { TerminalTabs, EmptyTabsPlaceholder, Tab } from "@/components/Terminal";
+import { TerminalView } from "@/components/Terminal/TerminalView";
+import { NewConnectionDialog } from "@/components/Dialogs";
+import { RpcProvider, useRpcContext } from "@/lib/rpc-context";
+import type { SessionStatus, ConnectionType } from "@/types/rpc";
+import type { PluginSDK } from "@proxycast/plugin-components";
+
+/**
+ * 插件组件 Props
+ */
+interface TerminalPluginProps {
+  sdk: PluginSDK;
+  pluginId: string;
+}
 
 /**
  * 终端主界面组件
- *
- * 包含标签页管理和终端视图。
  */
 const TerminalMain: React.FC = () => {
   const {
@@ -31,16 +41,31 @@ const TerminalMain: React.FC = () => {
     updateSessionTitle,
   } = useSessionStore();
 
+  const { isConnected, connect } = useRpcContext();
+
   // 新建连接对话框状态
   const [showNewConnectionDialog, setShowNewConnectionDialog] = useState(false);
+
+  // 初始化 RPC 连接
+  useEffect(() => {
+    if (!isConnected) {
+      connect().catch((err: Error) => {
+        console.error("Failed to connect RPC:", err);
+      });
+    }
+  }, [isConnected, connect]);
 
   // 将会话转换为标签页数据
   const tabs = useMemo<Tab[]>(() => {
     return getSessions().map((session) => ({
       id: session.id,
-      title: session.title || (session.connection_type.type === 'local' ? 'Terminal' : `SSH: ${session.connection_type.host}`),
+      title:
+        session.title ||
+        (session.connection_type.type === "local"
+          ? "Terminal"
+          : `SSH: ${session.connection_type.host}`),
       status: session.status,
-      isSSH: session.connection_type.type === 'ssh',
+      isSSH: session.connection_type.type === "ssh",
     }));
   }, [getSessions]);
 
@@ -59,7 +84,7 @@ const TerminalMain: React.FC = () => {
       try {
         await createSession(connection, { rows: 24, cols: 80 });
       } catch (error) {
-        console.error('Failed to create session:', error);
+        console.error("Failed to create session:", error);
       }
     },
     [createSession]
@@ -109,7 +134,7 @@ const TerminalMain: React.FC = () => {
   // 没有会话时显示空状态
   if (tabs.length === 0) {
     return (
-      <div className="flex flex-col h-full bg-gray-900">
+      <div className="flex flex-col h-full w-full" style={{ backgroundColor: 'var(--terminal-bg, #0d1117)' }}>
         <TerminalTabs
           tabs={[]}
           activeTabId={null}
@@ -121,7 +146,6 @@ const TerminalMain: React.FC = () => {
           <EmptyTabsPlaceholder onNewTab={handleNewTab} />
         </div>
 
-        {/* 新建连接对话框 */}
         {showNewConnectionDialog && (
           <NewConnectionDialog
             onConnect={handleConnect}
@@ -133,7 +157,7 @@ const TerminalMain: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-900">
+    <div className="relative flex flex-col h-full w-full" style={{ backgroundColor: 'var(--terminal-bg, #0d1117)' }}>
       {/* 标签页栏 */}
       <TerminalTabs
         tabs={tabs}
@@ -144,7 +168,7 @@ const TerminalMain: React.FC = () => {
       />
 
       {/* 终端视图 */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {activeSession && (
           <TerminalView
             key={activeSession.id}
@@ -166,14 +190,14 @@ const TerminalMain: React.FC = () => {
 
       {/* 加载状态 */}
       {state.isLoading && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-          <div className="text-white">创建会话中...</div>
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="text-gray-300 text-sm">创建会话中...</div>
         </div>
       )}
 
       {/* 错误提示 */}
       {state.error && (
-        <div className="absolute bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-lg">
+        <div className="absolute bottom-4 right-4 bg-red-600/90 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50">
           {state.error}
         </div>
       )}
@@ -184,13 +208,15 @@ const TerminalMain: React.FC = () => {
 /**
  * 终端应用组件
  *
- * 包装 SessionProvider 提供会话状态管理。
+ * 包装 RpcProvider 和 SessionProvider 提供状态管理。
  */
-export const TerminalApp: React.FC = () => {
+export const TerminalApp: React.FC<TerminalPluginProps> = ({ sdk, pluginId: _pluginId }) => {
   return (
-    <SessionProvider>
-      <TerminalMain />
-    </SessionProvider>
+    <RpcProvider sdk={sdk}>
+      <SessionProvider>
+        <TerminalMain />
+      </SessionProvider>
+    </RpcProvider>
   );
 };
 

@@ -2,6 +2,7 @@
  * TerminalTabs 组件
  *
  * 多标签页管理组件，支持标签页切换、新建、关闭和状态指示。
+ * 参考 waveterm 设计风格。
  *
  * @module components/Terminal/TerminalTabs
  */
@@ -42,14 +43,14 @@ export interface TerminalTabsProps {
 }
 
 /**
- * 状态指示器颜色映射
+ * 状态指示器类名映射
  */
-const statusColors: Record<SessionStatus, string> = {
-  init: 'bg-gray-500',
-  connecting: 'bg-yellow-500 animate-pulse',
-  running: 'bg-green-500',
-  done: 'bg-gray-400',
-  error: 'bg-red-500',
+const statusClasses: Record<SessionStatus, string> = {
+  init: '',
+  connecting: 'connecting',
+  running: 'running',
+  done: 'done',
+  error: 'error',
 };
 
 /**
@@ -68,7 +69,7 @@ const statusTitles: Record<SessionStatus, string> = {
  */
 const StatusIndicator: React.FC<{ status: SessionStatus }> = ({ status }) => (
   <span
-    className={`inline-block w-2 h-2 rounded-full mr-2 ${statusColors[status]}`}
+    className={`terminal-status-indicator ${statusClasses[status]}`}
     title={statusTitles[status]}
   />
 );
@@ -78,7 +79,7 @@ const StatusIndicator: React.FC<{ status: SessionStatus }> = ({ status }) => (
  */
 const TerminalIcon: React.FC<{ isSSH?: boolean; className?: string }> = ({ isSSH, className }) => (
   <svg
-    className={className || 'w-4 h-4 mr-1.5'}
+    className={className || 'w-4 h-4 mr-2 flex-shrink-0'}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -107,7 +108,7 @@ const TerminalIcon: React.FC<{ isSSH?: boolean; className?: string }> = ({ isSSH
  */
 const CloseButton: React.FC<{ onClick: (e: React.MouseEvent) => void }> = ({ onClick }) => (
   <button
-    className="ml-2 p-0.5 rounded hover:bg-gray-600 text-gray-500 hover:text-gray-300 transition-colors"
+    className="terminal-close-btn"
     onClick={onClick}
     title="关闭标签页"
     aria-label="关闭标签页"
@@ -124,7 +125,7 @@ const CloseButton: React.FC<{ onClick: (e: React.MouseEvent) => void }> = ({ onC
  */
 const NewTabButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
-    className="flex items-center justify-center px-3 py-2 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition-colors"
+    className="terminal-new-tab-btn"
     onClick={onClick}
     title="新建终端"
     aria-label="新建终端"
@@ -155,22 +156,15 @@ const TabItem: React.FC<{
 
   return (
     <div
-      className={`
-        group flex items-center px-3 py-2 cursor-pointer border-r border-gray-700
-        transition-colors select-none min-w-0 max-w-[200px]
-        ${isActive 
-          ? 'bg-gray-700 text-gray-100' 
-          : 'text-gray-400 hover:bg-gray-700/50 hover:text-gray-200'
-        }
-      `}
+      className={`terminal-tab ${isActive ? 'active' : ''}`}
       onClick={onSelect}
       role="tab"
       aria-selected={isActive}
       tabIndex={isActive ? 0 : -1}
     >
       <StatusIndicator status={tab.status} />
-      <TerminalIcon isSSH={tab.isSSH} className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
-      <span className="text-sm truncate flex-1">{tab.title}</span>
+      <TerminalIcon isSSH={tab.isSSH} />
+      <span className="truncate flex-1 text-left">{tab.title}</span>
       <CloseButton onClick={handleClose} />
     </div>
   );
@@ -184,20 +178,6 @@ const TabItem: React.FC<{
  * - 新建/关闭标签页
  * - 状态指示器（运行中、已结束、出错）
  * - SSH/本地终端图标区分
- *
- * @example
- * ```tsx
- * <TerminalTabs
- *   tabs={[
- *     { id: '1', title: 'Terminal', status: 'running' },
- *     { id: '2', title: 'SSH: server', status: 'connecting', isSSH: true },
- *   ]}
- *   activeTabId="1"
- *   onTabSelect={(id) => setActiveTab(id)}
- *   onTabClose={(id) => closeTab(id)}
- *   onNewTab={() => createNewTab()}
- * />
- * ```
  */
 export const TerminalTabs: React.FC<TerminalTabsProps> = ({
   tabs,
@@ -240,13 +220,13 @@ export const TerminalTabs: React.FC<TerminalTabsProps> = ({
 
   return (
     <div
-      className={`flex items-center bg-gray-800 border-b border-gray-700 ${className || ''}`}
+      className={`terminal-tabbar ${className || ''}`}
       role="tablist"
       aria-label="终端标签页"
       onKeyDown={handleKeyDown}
     >
       {/* 标签页列表 */}
-      <div className="flex items-center flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600">
+      <div className="flex items-center flex-1 overflow-x-auto h-full">
         {tabs.map((tab) => (
           <TabItem
             key={tab.id}
@@ -268,13 +248,10 @@ export const TerminalTabs: React.FC<TerminalTabsProps> = ({
  * 空状态组件 - 当没有标签页时显示
  */
 export const EmptyTabsPlaceholder: React.FC<{ onNewTab: () => void }> = ({ onNewTab }) => (
-  <div className="flex flex-col items-center justify-center h-full bg-gray-900 text-gray-400">
-    <TerminalIcon className="w-16 h-16 mb-4 opacity-50" />
-    <p className="text-lg mb-4">没有打开的终端</p>
-    <button
-      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-      onClick={onNewTab}
-    >
+  <div className="terminal-empty-state">
+    <TerminalIcon className="terminal-empty-state-icon" />
+    <p className="terminal-empty-state-text">没有打开的终端</p>
+    <button className="terminal-empty-state-btn" onClick={onNewTab}>
       新建终端
     </button>
   </div>

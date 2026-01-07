@@ -5,32 +5,379 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS 变量 - 参考 waveterm 设计 */
+:root {
+  --terminal-bg: #1a1b26;
+  --terminal-fg: #c0caf5;
+  --terminal-border: #3b4261;
+  --terminal-tab-bg: #24283b;
+  --terminal-tab-active-bg: #1a1b26;
+  --terminal-tab-hover-bg: #414868;
+  --terminal-accent: #7aa2f7;
+  --terminal-success: #9ece6a;
+  --terminal-warning: #e0af68;
+  --terminal-error: #f7768e;
+  --terminal-scrollbar-bg: transparent;
+  --terminal-scrollbar-thumb: #565f89;
+  --terminal-scrollbar-thumb-hover: #7aa2f7;
+  --terminal-muted: #565f89;
+}
+
 /* 终端容器样式 */
 .terminal-container {
   @apply w-full h-full;
+  background-color: var(--terminal-bg);
 }
 
 .terminal-container .xterm {
   @apply w-full h-full;
+  padding: 8px;
 }
 
 .terminal-container .xterm-viewport {
   @apply overflow-y-auto;
+  background-color: var(--terminal-bg) !important;
 }
 
-/* 滚动条样式 */
+/* 滚动条样式 - 参考 waveterm */
 .terminal-container .xterm-viewport::-webkit-scrollbar {
-  @apply w-2;
+  width: 6px;
+  height: 6px;
 }
 
 .terminal-container .xterm-viewport::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  background-color: var(--terminal-scrollbar-bg);
 }
 
 .terminal-container .xterm-viewport::-webkit-scrollbar-thumb {
-  @apply bg-gray-600 rounded;
+  display: none;
+  background-color: var(--terminal-scrollbar-thumb);
+  border-radius: 4px;
 }
 
 .terminal-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-500;
+  background-color: var(--terminal-scrollbar-thumb-hover);
+}
+
+/* 悬停时显示滚动条 */
+.terminal-container:hover .xterm-viewport::-webkit-scrollbar-thumb {
+  display: block;
+}
+
+/* 标签栏样式 */
+.terminal-tabbar {
+  display: flex;
+  align-items: center;
+  background-color: var(--terminal-tab-bg);
+  border-bottom: 1px solid var(--terminal-border);
+  height: 40px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.terminal-tabbar button {
+  background: none;
+  border: none;
+}
+
+/* 标签页样式 */
+.terminal-tab {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  height: 100%;
+  min-width: 140px;
+  max-width: 220px;
+  border-right: 1px solid var(--terminal-border);
+  color: var(--terminal-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
+}
+
+.terminal-tab:hover {
+  background-color: var(--terminal-tab-hover-bg);
+  color: var(--terminal-fg);
+}
+
+.terminal-tab.active {
+  background-color: var(--terminal-tab-active-bg);
+  color: var(--terminal-fg);
+  border-bottom: 2px solid var(--terminal-accent);
+  margin-bottom: -1px;
+}
+
+/* 状态指示器 */
+.terminal-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.terminal-status-indicator.running {
+  background-color: var(--terminal-success);
+}
+
+.terminal-status-indicator.connecting {
+  background-color: var(--terminal-warning);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.terminal-status-indicator.error {
+  background-color: var(--terminal-error);
+}
+
+.terminal-status-indicator.done {
+  background-color: #6e7681;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* 新建标签按钮 */
+.terminal-new-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 100%;
+  color: var(--terminal-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
+  border: none;
+}
+
+.terminal-new-tab-btn:hover {
+  background-color: var(--terminal-tab-hover-bg);
+  color: var(--terminal-accent);
+}
+
+/* 关闭按钮 */
+.terminal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  border-radius: 4px;
+  color: #6e7681;
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+
+.terminal-tab:hover .terminal-close-btn,
+.terminal-tab.active .terminal-close-btn {
+  opacity: 1;
+}
+
+.terminal-close-btn:hover {
+  background-color: rgba(248, 81, 73, 0.2);
+  color: var(--terminal-error);
+}
+
+/* 空状态 */
+.terminal-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background-color: var(--terminal-bg);
+  color: var(--terminal-fg);
+}
+
+.terminal-empty-state-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
+  color: var(--terminal-accent);
+  opacity: 0.6;
+}
+
+.terminal-empty-state-text {
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: var(--terminal-muted);
+}
+
+.terminal-empty-state-btn {
+  padding: 10px 24px;
+  background-color: var(--terminal-accent);
+  color: #1a1b26;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.terminal-empty-state-btn:hover {
+  background-color: #89b4fa;
+  transform: translateY(-1px);
+}
+
+/* 对话框样式 */
+.terminal-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.terminal-dialog {
+  background-color: #161b22;
+  border: 1px solid var(--terminal-border);
+  border-radius: 12px;
+  padding: 24px;
+  width: 420px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+}
+
+.terminal-dialog-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--terminal-fg);
+  margin-bottom: 16px;
+}
+
+/* 模式切换按钮 */
+.terminal-mode-switch {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.terminal-mode-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #21262d;
+  color: #8b949e;
+  border: 1px solid var(--terminal-border);
+}
+
+.terminal-mode-btn:hover {
+  background-color: #30363d;
+  color: var(--terminal-fg);
+}
+
+.terminal-mode-btn.active {
+  background-color: var(--terminal-accent);
+  color: white;
+  border-color: var(--terminal-accent);
+}
+
+/* 表单输入 */
+.terminal-input {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: #0d1117;
+  border: 1px solid var(--terminal-border);
+  border-radius: 6px;
+  color: var(--terminal-fg);
+  font-size: 14px;
+  transition: border-color 0.15s ease;
+}
+
+.terminal-input:focus {
+  outline: none;
+  border-color: var(--terminal-accent);
+}
+
+.terminal-input::placeholder {
+  color: #6e7681;
+}
+
+.terminal-label {
+  display: block;
+  font-size: 13px;
+  color: #8b949e;
+  margin-bottom: 6px;
+}
+
+/* 折叠面板 */
+.terminal-collapsible {
+  border: 1px solid var(--terminal-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.terminal-collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background-color: #21262d;
+  color: #8b949e;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.terminal-collapsible-header:hover {
+  background-color: #30363d;
+  color: var(--terminal-fg);
+}
+
+.terminal-collapsible-content {
+  padding: 12px;
+  background-color: #161b22;
+}
+
+/* 按钮 */
+.terminal-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.terminal-btn-primary {
+  background-color: var(--terminal-accent);
+  color: white;
+}
+
+.terminal-btn-primary:hover {
+  background-color: #4c9aed;
+}
+
+.terminal-btn-secondary {
+  background-color: transparent;
+  color: #8b949e;
+}
+
+.terminal-btn-secondary:hover {
+  color: var(--terminal-fg);
+}
+
+/* 对话框底部按钮 */
+.terminal-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
 }

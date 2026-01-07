@@ -3,15 +3,16 @@
  *
  * 管理终端实例的 React Hook。
  * 集成 xterm.js 包装器和 RPC 通信。
+ * 使用 RpcContext 进行通信。
  *
  * @module hooks/useTerminal
  */
 
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { TermWrap } from '@/lib/termwrap';
-import { rpcClient } from '@/lib/rpc-client';
-import type { TerminalConfig } from '@/types/terminal';
-import { defaultConfig } from '@/types/terminal';
+import { useEffect, useRef, useCallback, useState } from "react";
+import { TermWrap } from "@/lib/termwrap";
+import { useRpcContext } from "@/lib/rpc-context";
+import type { TerminalConfig } from "@/types/terminal";
+import { defaultConfig } from "@/types/terminal";
 
 export interface UseTerminalOptions {
   /** 终端配置 */
@@ -57,21 +58,13 @@ export interface UseTerminalResult {
  * - RPC 输出通知监听
  * - 输入/输出处理
  * - 大小调整
- *
- * @example
- * ```tsx
- * const { containerRef, write, focus } = useTerminal({
- *   sessionId: 'session-123',
- *   onData: (data) => sendInput(sessionId, data),
- *   onResize: (cols, rows) => resize(sessionId, { cols, rows }),
- * });
- * ```
  */
 export function useTerminal(options: UseTerminalOptions = {}): UseTerminalResult {
   const { config = defaultConfig, sessionId, onData, onResize, onTitleChange } = options;
   const containerRef = useRef<HTMLDivElement>(null);
   const termWrapRef = useRef<TermWrap | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const rpc = useRpcContext();
 
   // 初始化终端
   useEffect(() => {
@@ -96,33 +89,33 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalResult
   useEffect(() => {
     if (!sessionId) return;
 
-    const unsubscribe = rpcClient.on('terminal.output', (notification) => {
-      if (notification.session_id === sessionId && termWrapRef.current) {
+    const unsubscribe = rpc.onOutput((sid, data) => {
+      if (sid === sessionId && termWrapRef.current) {
         // 解码 base64 数据
         try {
-          const decoded = atob(notification.data);
+          const decoded = atob(data);
           termWrapRef.current.write(decoded);
         } catch (e) {
-          console.error('Failed to decode terminal output:', e);
+          console.error("Failed to decode terminal output:", e);
         }
       }
     });
 
     return unsubscribe;
-  }, [sessionId]);
+  }, [sessionId, rpc]);
 
   // 监听标题变化通知
   useEffect(() => {
     if (!sessionId) return;
 
-    const unsubscribe = rpcClient.on('session.title', (notification) => {
-      if (notification.session_id === sessionId) {
-        onTitleChange?.(notification.title);
+    const unsubscribe = rpc.onTitle((sid, title) => {
+      if (sid === sessionId) {
+        onTitleChange?.(title);
       }
     });
 
     return unsubscribe;
-  }, [sessionId, onTitleChange]);
+  }, [sessionId, rpc, onTitleChange]);
 
   const write = useCallback((data: string) => {
     termWrapRef.current?.write(data);
